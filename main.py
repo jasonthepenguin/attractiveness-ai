@@ -1,13 +1,34 @@
 
 import tkinter as tk
 from PIL import Image, ImageTk
+import glob
+
+image_paths = glob.glob("./img_align_celeba/*.jpg")
+
+# helpers class
+class ImageLabeler:
+    def __init__(self, image_paths, frame):
+        self.image_paths = image_paths
+        self.index = 0
+        self.Image = None
+        self.frame = frame
+        # opening and loading the very first image
+        self.Image = Image.open(image_paths[self.index])
+        self.convertedImage = ImageTk.PhotoImage(self.Image)
+
+        self.imageLabel = tk.Label(self.frame, image=self.convertedImage)
+        
+    
+    def next_image(self):
+        self.index += 1
+        self.Image = Image.open(image_paths[self.index])
+        self.convertedImage = ImageTk.PhotoImage(self.Image)
+        self.imageLabel.config(image=self.convertedImage)
+    
+    def pack(self):
+        self.imageLabel.pack()
 
 
-# helper functions
-
-def next_image():
-    # get the next image
-    print("Hello")
 
 # Create the main window
 root = tk.Tk()
@@ -29,23 +50,19 @@ y = (screen_height - height) // 2
 # Set geometry: "widthheight+x+y"
 root.geometry(f"{width}x{height}+{x}+{y}")
 
-# Opening and converting image file to be ready for use in Tkinter
-firstImage = Image.open("./img_align_celeba/000954.jpg")
-convertedImage = ImageTk.PhotoImage(firstImage)
 
 
 # Create the Frame to group and vertically center the image and the button elements
 frame = tk.Frame(root)
 frame.pack(expand=True)
 
-# Creating the label and image to display inside the frame
 
-# Put the label inside the frame (not root)
-label = tk.Label(frame, image=convertedImage)
-label.pack()
+# Create instance of image class and pass it the image paths
+labeler = ImageLabeler(image_paths=image_paths, frame=frame)
+labeler.pack()
 
 # Put the button inside the frame (not root)
-button = tk.Button(frame, text="Next", command=next_image)
+button = tk.Button(frame, text="Next", command=labeler.next_image)
 button.pack()
 
 # Start the event loop (keeps window open)
