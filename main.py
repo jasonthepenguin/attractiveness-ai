@@ -7,8 +7,8 @@ root.title("Image Labler")
 
 
 # Set window size
-width = 800
-height = 600
+width = 1200
+height = 900
 
 # Get screen dimensions
 screen_width = root.winfo_screenwidth()
