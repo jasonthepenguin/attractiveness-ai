@@ -17,9 +17,6 @@ class ImageLabeler:
         self.Image = Image.open(image_paths[self.index])
         self.convertedImage = ImageTk.PhotoImage(self.Image)
 
-
-
-
         self.imageLabel = tk.Label(self.frame, image=self.convertedImage)
 
         # Add counter above the image
@@ -65,7 +62,7 @@ root.title("Image Labeler")
 
 
 # Set window size
-width = 1200
+width = 900
 height = 900
 
 # Get screen dimensions
