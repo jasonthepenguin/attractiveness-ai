@@ -17,13 +17,18 @@ class ImageLabeler:
         self.convertedImage = ImageTk.PhotoImage(self.Image)
 
         self.imageLabel = tk.Label(self.frame, image=self.convertedImage)
+
+        # Add counter above the image
+        self.counterLabel = tk.Label(self.frame, text=f"1 / {len(self.image_paths)}")
+        self.counterLabel.pack(anchor="e") # "e" = east = right side
         
     
     def next_image(self):
         self.index += 1
-        self.Image = Image.open(image_paths[self.index])
+        self.Image = Image.open(self.image_paths[self.index])
         self.convertedImage = ImageTk.PhotoImage(self.Image)
         self.imageLabel.config(image=self.convertedImage)
+        self.counterLabel.config(text=f"{self.index + 1} / {len(self.image_paths)}")
     
     def pack(self):
         self.imageLabel.pack()
