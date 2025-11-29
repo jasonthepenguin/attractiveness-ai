@@ -3,7 +3,8 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import glob
 
-image_paths = glob.glob("./img_align_celeba/*.jpg")
+
+image_paths = sorted(glob.glob("./img_align_celeba/*.jpg"))
 
 # helpers class
 class ImageLabeler:
@@ -16,11 +17,26 @@ class ImageLabeler:
         self.Image = Image.open(image_paths[self.index])
         self.convertedImage = ImageTk.PhotoImage(self.Image)
 
+
+
+
         self.imageLabel = tk.Label(self.frame, image=self.convertedImage)
 
         # Add counter above the image
         self.counterLabel = tk.Label(self.frame, text=f"1 / {len(self.image_paths)}")
         self.counterLabel.pack(anchor="e") # "e" = east = right side
+
+        # Add file name
+        self.filenameLabel = tk.Label(self.frame, text=f"{self.image_paths[self.index]}")
+        self.filenameLabel.pack(anchor="e")
+
+        # Rating buttons
+        self.buttonFrame = tk.Frame(self.frame)
+        
+        for i in range(1, 11):
+            btn = tk.Button(self.buttonFrame, text=str(i), command=lambda x=i: self.rate(x))
+            btn.pack(side="left")
+        
         
     
     def next_image(self):
@@ -29,9 +45,17 @@ class ImageLabeler:
         self.convertedImage = ImageTk.PhotoImage(self.Image)
         self.imageLabel.config(image=self.convertedImage)
         self.counterLabel.config(text=f"{self.index + 1} / {len(self.image_paths)}")
+
+        self.filenameLabel.config(text=f"{self.image_paths[self.index]}")
     
     def pack(self):
         self.imageLabel.pack()
+        self.buttonFrame.pack()
+
+    def rate(self, score):
+        # save the rating somehow
+        print(f"Rated {self.image_paths[self.index]}: {score}")
+        self.next_image()
 
 
 
@@ -56,7 +80,6 @@ y = (screen_height - height) // 2
 root.geometry(f"{width}x{height}+{x}+{y}")
 
 
-
 # Create the Frame to group and vertically center the image and the button elements
 frame = tk.Frame(root)
 frame.pack(expand=True)
@@ -66,9 +89,6 @@ frame.pack(expand=True)
 labeler = ImageLabeler(image_paths=image_paths, frame=frame)
 labeler.pack()
 
-# Put the button inside the frame (not root)
-button = tk.Button(frame, text="Next", command=labeler.next_image)
-button.pack()
 
 # Start the event loop (keeps window open)
 root.mainloop()
