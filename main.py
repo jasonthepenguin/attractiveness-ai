@@ -2,6 +2,8 @@
 import tkinter as tk
 from PIL import Image, ImageTk
 import glob
+import csv
+import os
 
 
 image_paths = sorted(glob.glob("./img_align_celeba/*.jpg"))
@@ -13,6 +15,12 @@ class ImageLabeler:
         self.index = 0
         self.Image = None
         self.frame = frame
+
+        # Check if CSV already exists, to continue
+        if os.path.exists("ratings.csv"):
+            with open("ratings.csv", "r") as f:
+                self.index = sum(1 for line in f)
+
         # opening and loading the very first image
         self.Image = Image.open(image_paths[self.index])
         self.convertedImage = ImageTk.PhotoImage(self.Image)
@@ -20,7 +28,7 @@ class ImageLabeler:
         self.imageLabel = tk.Label(self.frame, image=self.convertedImage)
 
         # Add counter above the image
-        self.counterLabel = tk.Label(self.frame, text=f"1 / {len(self.image_paths)}")
+        self.counterLabel = tk.Label(self.frame, text=f"{self.index + 1} / {len(self.image_paths)}")
         self.counterLabel.pack(anchor="e") # "e" = east = right side
 
         # Add file name
@@ -38,6 +46,11 @@ class ImageLabeler:
     
     def next_image(self):
         self.index += 1
+        if self.index >= len(self.image_paths):
+            print("Done Labeling!")
+            root.quit() # or root.destroy()
+            return
+
         self.Image = Image.open(self.image_paths[self.index])
         self.convertedImage = ImageTk.PhotoImage(self.Image)
         self.imageLabel.config(image=self.convertedImage)
