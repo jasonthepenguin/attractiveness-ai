@@ -50,7 +50,11 @@ class ImageLabeler:
         self.buttonFrame.pack()
 
     def rate(self, score):
-        # save the rating somehow
+        # save the rating
+        with open("ratings.csv", "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([self.image_paths[self.index], score])
+
         print(f"Rated {self.image_paths[self.index]}: {score}")
         self.next_image()
 

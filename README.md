@@ -17,6 +17,14 @@ Training a personal face attractiveness rating model (1-10 scale) based on my ow
 - [ ] Label images
 - [ ] Train model
 
+## Model
+
+Fine-tuning ResNet18 (pretrained on ImageNet) with a 10-class output layer. Using transfer learning since 1000 images is too small to train from scratch.
+
+## Hosting
+
+Planning to host the model on Hugging Face Spaces (free tier) and build a simple frontend that calls the inference API.
+
 ## Dataset
 
 Using CelebA (Celebrity Faces) - 1000 aligned face images stored in `img_align_celeba/`.
