@@ -30,3 +30,31 @@ class RatingsDataset(Dataset):
         # Convert rating 1-10 to 0-9 for classification
         label = rating - 1
         return image, label
+
+
+
+# Load pretrained ResNet18
+model = models.resnet18(weights='DEFAULT')
+
+# Freeze early layers (keep pretrained features)
+for param in model.parameters():
+    param.requires_grad = False
+
+# Replace final layer (1000 ImageNet classes -> 10 rating classes)
+model.fc = nn.Linear(model.fc.in_features, 10)
+
+
+# Image transforms
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+
+# Create dataset and dataloader 
+dataset = RatingsDataset("ratings.csv", transform=transform)
+dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+# Loss function and optimizer
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.fc.parameters(), lr=0.001)
