@@ -28,10 +28,8 @@ class RatingsDataset(Dataset):
         img_path, rating = self.samples[idx]
         image = Image.open(img_path).convert('RGB')
 
-
-        
-        # Convert rating 1-10 to 0-9 for classification
-        label = rating - 1
+        # Return rating as float for regression
+        label = float(rating)
         return image, label
 
 class TransformDataset:
@@ -55,12 +53,15 @@ model = models.resnet18(weights='DEFAULT')
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 print(f"Using device: {device}")
 
-# Freeze early layers (keep pretrained features)
-for param in model.parameters():
-    param.requires_grad = False
+# Freeze early layers, unfreeze layer3 and layer4 for fine-tuning
+for name, param in model.named_parameters():
+    if "layer4" in name or "layer3" in name:
+        param.requires_grad = True
+    else:
+        param.requires_grad = False
 
-# Replace final layer (1000 ImageNet classes -> 10 rating classes)
-model.fc = nn.Linear(model.fc.in_features, 10)
+# Replace final layer with single output for regression
+model.fc = nn.Linear(model.fc.in_features, 1)
 model = model.to(device)
 
 # Image transforms
@@ -82,10 +83,9 @@ val_transform = transforms.Compose([
 # Create dataset and dataloader 
 dataset = RatingsDataset("ratings.csv", transform=None)
 
-# Train and Validation split
-train_size = int(0.95 * len(dataset))
+# Train and Validation split (85/15 for more reliable validation)
+train_size = int(0.85 * len(dataset))
 val_size = len(dataset) - train_size
-#train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 train_subset, val_subset = random_split(dataset, [train_size, val_size])
 
 # Wrap with transforms
@@ -96,28 +96,30 @@ val_dataset = TransformDataset(val_subset, val_transform)
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-# Loss function and optimizer
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.fc.parameters(), lr=0.001)
-
-
+# Loss function and optimizer (train all unfrozen parameters)
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=0.001)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', patience=3, factor=0.5)
 
 # Training loop
-num_epochs = 30
+num_epochs = 50
+early_stop_patience = 7
+epochs_without_improvement = 0
 
-best_val_accuracy = 0.0
+best_val_loss = float('inf')
 
 model.train() # Set model to training mode
 
 for epoch in range(num_epochs):
     running_loss = 0.0
-    correct = 0
+    running_mae = 0.0
     total = 0
 
     for images, labels in train_loader:
 
-        # Move data from CPU to the GPU
-        images, labels = images.to(device), labels.to(device)
+        # Move data to device, reshape labels for regression
+        images = images.to(device)
+        labels = labels.float().unsqueeze(1).to(device)
 
         # Zero the gradients
         optimizer.zero_grad()
@@ -126,51 +128,59 @@ for epoch in range(num_epochs):
         outputs = model(images)
         loss = criterion(outputs, labels)
 
-        # Backward pass and optmize
+        # Backward pass and optimize
         loss.backward()
         optimizer.step()
 
         # Track stats
         running_loss += loss.item()
-        _, predicted = torch.max(outputs, 1)
+        running_mae += torch.abs(outputs - labels).sum().item()
         total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-    
+
     # Print epoch stats
     epoch_loss = running_loss / len(train_loader)
-    accuracy = 100 * correct / total
-    print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%")
+    epoch_mae = running_mae / total
+    print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {epoch_loss:.4f}, MAE: {epoch_mae:.2f}")
 
     # Validation stats
     model.eval()
     val_loss = 0.0
-    val_correct = 0
+    val_mae = 0.0
     val_total = 0
 
     with torch.no_grad():
         for images, labels in val_loader:
 
-            # Move data from CPU to the GPU
-            images, labels = images.to(device), labels.to(device)
+            # Move data to device, reshape labels for regression
+            images = images.to(device)
+            labels = labels.float().unsqueeze(1).to(device)
 
             outputs = model(images)
             loss = criterion(outputs, labels)
 
             val_loss += loss.item()
-            _, predicted = torch.max(outputs, 1)
+            val_mae += torch.abs(outputs - labels).sum().item()
             val_total += labels.size(0)
-            val_correct += (predicted == labels).sum().item()
-    
-    val_accuracy = 100 * val_correct / val_total
-    print(f"Validation Loss: {val_loss/len(val_loader):.4f}, Accuracy {val_accuracy:.2f}%")
-    
+
+    avg_val_loss = val_loss / len(val_loader)
+    avg_val_mae = val_mae / val_total
+    print(f"Validation Loss: {avg_val_loss:.4f}, MAE: {avg_val_mae:.2f}")
+
+    # Step the scheduler
+    scheduler.step(avg_val_loss)
+
     model.train() # Back to training mode for next epoch
 
-
-    # Save the model if validaiton accuracy is better than last epoch
-    if (val_accuracy > best_val_accuracy):
-        best_val_accuracy = val_accuracy
+    # Save the model if validation loss improved
+    if avg_val_loss < best_val_loss:
+        best_val_loss = avg_val_loss
+        epochs_without_improvement = 0
         torch.save(model.state_dict(), "attractiveness_model.pth")
-        print(f"New best model saved! Accuracy : {val_accuracy:.2f}%")
+        print(f"New best model saved! Val Loss: {avg_val_loss:.4f}, MAE: {avg_val_mae:.2f}")
+    else:
+        epochs_without_improvement += 1
+        if epochs_without_improvement >= early_stop_patience:
+            print(f"Early stopping after {epoch + 1} epochs")
+            break
 
-print(f"Training complete! Best validation accuracy is : {best_val_accuracy:.2f}%")
+print(f"Training complete! Best validation loss: {best_val_loss:.4f}")

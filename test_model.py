@@ -6,9 +6,9 @@ from PIL import Image, ImageTk
 import tkinter as tk
 from tkinter import filedialog
 
-# Load model (same architecture as training)
+# Load model (same architecture as training - single output for regression)
 model = models.resnet18(weights=None)
-model.fc = nn.Linear(model.fc.in_features, 10)
+model.fc = nn.Linear(model.fc.in_features, 1)
 model.load_state_dict(torch.load("attractiveness_model.pth", map_location="cpu"))
 model.eval()
 
@@ -25,17 +25,11 @@ def predict(image_path):
 
     with torch.no_grad():
         output = model(input_tensor)
-        probabilities = torch.softmax(output, dim=1)[0] # Get probabilities
+        score = output.item()  # Direct regression output
+        # Clamp to valid range
+        score = max(1.0, min(10.0, score))
 
-        # Weighted average: sum(rating * probability) for all ratings
-        ratings = torch.arange(1, 11, dtype=torch.float) # [1, 2, 3.... 10]
-        weighted_score = (probabilities * ratings).sum().item()
-
-
-        #predicted_class = torch.argmax(output, dim=1).item()
-    
-    #return predicted_class + 1 # Convert 0-9 back to 1-10
-    return weighted_score
+    return score
 
 
 # GUI
