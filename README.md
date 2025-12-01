@@ -15,16 +15,31 @@ Training a personal face attractiveness rating model (1-10 scale) based on my ow
 - [x] Trimmed to 1000 images for labeling
 - [x] Build labeling tool
 - [x] Label images
-- [ ] Train model
-- [ ] Deploy to Hugging Face
+- [x] Train model
+- [ ] Deploy to Hugging Face Spaces
+- [ ] Build Next.js frontend
 
 ## Model
 
-Fine-tuning ResNet18 (pretrained on ImageNet) with a 10-class output layer. Using transfer learning since 1000 images is too small to train from scratch.
+Fine-tuning ResNet18 (pretrained on ImageNet) with regression output (single value). Using transfer learning since 1000 images is too small to train from scratch.
 
-## Hosting
+## Deployment Plan
 
-Planning to host the model on Hugging Face Spaces (free tier) and build a simple frontend that calls the inference API.
+### Architecture
+```
+Next.js App  →  Hugging Face Spaces API  →  Returns rating
+(frontend)         (hosts model)
+```
+
+### Step 1: Host model on Hugging Face Spaces
+- Create a Gradio app that loads `attractiveness_model.pth`
+- Upload to HF Spaces (free tier)
+- This auto-generates an API endpoint
+
+### Step 2: Build Next.js frontend
+- Simple image upload UI
+- Call HF Spaces API using `@gradio/client` or fetch
+- Display the rating result
 
 ## Dataset
 
