@@ -16,31 +16,40 @@ Training a personal face attractiveness rating model (1-10 scale) based on my ow
 - [x] Build labeling tool
 - [x] Label images
 - [x] Train model
-- [ ] Deploy to Hugging Face Spaces
+- [x] Deploy to Hugging Face Spaces
 - [ ] Build Next.js frontend
 
 ## Model
 
 Fine-tuning ResNet18 (pretrained on ImageNet) with regression output (single value). Using transfer learning since 1000 images is too small to train from scratch.
 
-## Deployment Plan
+## Hugging Face Space
 
-### Architecture
+- **Space URL:** https://huggingface.co/spaces/jasonfor2020/jb-hot-regression
+- **Gradio App:** https://jasonfor2020-jb-hot-regression.hf.space
+
+### API Usage (for Next.js)
+
+Using `@gradio/client`:
+```typescript
+import { Client } from "@gradio/client";
+
+const client = await Client.connect("jasonfor2020/jb-hot-regression");
+const result = await client.predict("/predict", { image: imageFile });
+const rating = result.data[0]; // e.g. "7.2 / 10"
 ```
-Next.js App  →  Hugging Face Spaces API  →  Returns rating
-(frontend)         (hosts model)
+
+Or via fetch:
+```typescript
+const response = await fetch("https://jasonfor2020-jb-hot-regression.hf.space/api/predict", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ data: [base64Image] })
+});
+const { data } = await response.json();
+const rating = data[0];
 ```
-
-### Step 1: Host model on Hugging Face Spaces
-- Create a Gradio app that loads `attractiveness_model.pth`
-- Upload to HF Spaces (free tier)
-- This auto-generates an API endpoint
-
-### Step 2: Build Next.js frontend
-- Simple image upload UI
-- Call HF Spaces API using `@gradio/client` or fetch
-- Display the rating result
 
 ## Dataset
 
-Using CelebA (Celebrity Faces) - 1000 aligned face images stored in `img_align_celeba/`.
+Using CelebA (Celebrity Faces) - 2000 aligned face images stored in `img_align_celeba/`.
