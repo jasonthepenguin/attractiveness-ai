@@ -103,7 +103,7 @@ optimizer = torch.optim.Adam(model.fc.parameters(), lr=0.001)
 
 
 # Training loop
-num_epochs = 10
+num_epochs = 30
 
 best_val_accuracy = 0.0
 
