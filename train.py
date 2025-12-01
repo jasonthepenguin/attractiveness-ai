@@ -58,3 +58,42 @@ dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 # Loss function and optimizer
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.fc.parameters(), lr=0.001)
+
+
+
+# Training loop
+num_epochs = 10
+
+model.train() # Set model to training mode
+
+for epoch in range(num_epochs):
+    running_loss = 0.0
+    correct = 0
+    total = 0
+
+    for images, labels in dataloader:
+        # Zero the gradients
+        optimizer.zero_grad()
+
+        # Forward pass
+        outputs = model(images)
+        loss = criterion(outputs, labels)
+
+        # Backward pass and optmize
+        loss.backward()
+        optimizer.step()
+
+        # Track stats
+        running_loss += loss.item()
+        _, predicted = torch.max(outputs, 1)
+        total += labels.size(0)
+        correct += (predicted == labels).sum().item()
+    
+    # Print epoch stats
+    epoch_loss = running_loss / len(dataloader)
+    accuracy = 100 * correct / total
+    print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {epoch_loss:.4f}, Accuracy: {accuracy:.2f}%")
+
+    # Save the model
+    torch.save(model.state_dict(), "attractiveness_model.pth")
+    print("Model saved!")
