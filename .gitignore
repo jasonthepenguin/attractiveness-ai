@@ -1,5 +1,5 @@
 # Image dataset
 img_align_celeba/
-
+new_celeba/
 
 *.pth

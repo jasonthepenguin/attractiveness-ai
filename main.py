@@ -6,7 +6,6 @@ import csv
 import os
 
 
-image_paths = sorted(glob.glob("./img_align_celeba/*.jpg"))
 
 # helpers class
 class ImageLabeler:
