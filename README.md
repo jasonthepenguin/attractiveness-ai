@@ -13,9 +13,10 @@ Training a personal face attractiveness rating model (1-10 scale) based on my ow
 
 - [x] Downloaded CelebA dataset
 - [x] Trimmed to 1000 images for labeling
-- [ ] Build labeling tool
-- [ ] Label images
+- [x] Build labeling tool
+- [x] Label images
 - [ ] Train model
+- [ ] Deploy to Hugging Face
 
 ## Model
 
