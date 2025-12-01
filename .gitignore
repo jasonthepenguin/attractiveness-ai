@@ -1,2 +1,5 @@
 # Image dataset
 img_align_celeba/
+
+
+*.pth
