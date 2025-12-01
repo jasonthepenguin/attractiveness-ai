@@ -7,6 +7,8 @@ import csv
 
 from torch.utils.data import random_split
 
+torch.manual_seed(42)
+
 # Create dataset class to read the CSV and loads the images
 
 class RatingsDataset(Dataset):
@@ -26,14 +28,25 @@ class RatingsDataset(Dataset):
         img_path, rating = self.samples[idx]
         image = Image.open(img_path).convert('RGB')
 
-        if self.transform:
-            image = self.transform(image)
+
         
         # Convert rating 1-10 to 0-9 for classification
         label = rating - 1
         return image, label
 
+class TransformDataset:
+    def __init__(self, subset, transform):
+        self.subset = subset
+        self.transform = transform
 
+    def __len__(self):
+        return len(self.subset)
+
+    def __getitem__(self, idx):
+        image, label = self.subset[idx]
+        if self.transform:
+            image = self.transform(image)
+        return image, label
 
 # Load pretrained ResNet18
 model = models.resnet18(weights='DEFAULT')
@@ -51,20 +64,33 @@ model.fc = nn.Linear(model.fc.in_features, 10)
 model = model.to(device)
 
 # Image transforms
-transform = transforms.Compose([
+train_transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomRotation(15),
+    transforms.ColorJitter(brightness=0.2, contrast=0.2),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
+
+val_transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
 # Create dataset and dataloader 
-dataset = RatingsDataset("ratings.csv", transform=transform)
+dataset = RatingsDataset("ratings.csv", transform=None)
 
 # Train and Validation split
-
 train_size = int(0.95 * len(dataset))
 val_size = len(dataset) - train_size
-train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+#train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+train_subset, val_subset = random_split(dataset, [train_size, val_size])
+
+# Wrap with transforms
+train_dataset = TransformDataset(train_subset, train_transform)
+val_dataset = TransformDataset(val_subset, val_transform)
 
 
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
@@ -146,3 +172,5 @@ for epoch in range(num_epochs):
         best_val_accuracy = val_accuracy
         torch.save(model.state_dict(), "attractiveness_model.pth")
         print(f"New best model saved! Accuracy : {val_accuracy:.2f}%")
+
+print(f"Training complete! Best validation accuracy is : {best_val_accuracy:.2f}%")
