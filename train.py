@@ -38,13 +38,17 @@ class RatingsDataset(Dataset):
 # Load pretrained ResNet18
 model = models.resnet18(weights='DEFAULT')
 
+# Use Metal to use Macs GPU
+device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+print(f"Using device: {device}")
+
 # Freeze early layers (keep pretrained features)
 for param in model.parameters():
     param.requires_grad = False
 
 # Replace final layer (1000 ImageNet classes -> 10 rating classes)
 model.fc = nn.Linear(model.fc.in_features, 10)
-
+model = model.to(device)
 
 # Image transforms
 transform = transforms.Compose([
@@ -75,6 +79,8 @@ optimizer = torch.optim.Adam(model.fc.parameters(), lr=0.001)
 # Training loop
 num_epochs = 10
 
+best_val_accuracy = 0.0
+
 model.train() # Set model to training mode
 
 for epoch in range(num_epochs):
@@ -83,6 +89,10 @@ for epoch in range(num_epochs):
     total = 0
 
     for images, labels in train_loader:
+
+        # Move data from CPU to the GPU
+        images, labels = images.to(device), labels.to(device)
+
         # Zero the gradients
         optimizer.zero_grad()
 
@@ -113,6 +123,10 @@ for epoch in range(num_epochs):
 
     with torch.no_grad():
         for images, labels in val_loader:
+
+            # Move data from CPU to the GPU
+            images, labels = images.to(device), labels.to(device)
+
             outputs = model(images)
             loss = criterion(outputs, labels)
 
@@ -126,6 +140,9 @@ for epoch in range(num_epochs):
     
     model.train() # Back to training mode for next epoch
 
-    # Save the model
-    torch.save(model.state_dict(), "attractiveness_model.pth")
-    print("Model saved!")
+
+    # Save the model if validaiton accuracy is better than last epoch
+    if (val_accuracy > best_val_accuracy):
+        best_val_accuracy = val_accuracy
+        torch.save(model.state_dict(), "attractiveness_model.pth")
+        print(f"New best model saved! Accuracy : {val_accuracy:.2f}%")
